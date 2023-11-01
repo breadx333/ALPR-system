@@ -1,19 +1,36 @@
 import cv2
 from ultralytics import YOLO
 import easyocr
+import sqlite3
+from flask import request, Response, Flask
+
+app = Flask(__name__)
+
+def do_image_processing(image):
+  print("doing some image processing ")
+  return "Response"
+  
+  
+@app.route("/")
+def hello_world():
+    return "<p>Pidor</p>"
+
+con = sqlite3.connect("entrance.db")
+cur = con.cursor()
+print(cur.execute("SELECT * FROM allowed").fetchall())
 
 model = YOLO('yolov8x.pt')
 ALPR = YOLO('license_plate_detector.pt')
 
-result = model.predict("test.jpg")[0]
+result = model.predict("test_many.jpg")[0]
 
-img = cv2.imread('test.jpg') 
+img = cv2.imread('test_many.jpg') 
 
 reader = easyocr.Reader(['en'], gpu=True)
 
 for box in result.boxes:
     class_id = result.names[box.cls[0].item()]
-    print(class_id)
+    #print(class_id)
     if (class_id == 'car'):
         conf = round(box.conf[0].item(), 2)
         if (conf >= 0.8):
@@ -39,8 +56,15 @@ for box in result.boxes:
 
                 cropped_img_plate = cropped_img[cords_xyxy_ALPR[1]:cords_xyxy_ALPR[3], cords_xyxy_ALPR[0]:cords_xyxy_ALPR[2]]
 
-                resultOCR = reader.readtext(cropped_img_plate)
-                print(resultOCR)
+                resultOCR = reader.readtext(cropped_img_plate, allowlist = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+                if (len(resultOCR)):
+                    data_from_db = cur.execute("SELECT * FROM allowed")
+                    characterizedResultOCR = "".join([x[1] for x in resultOCR])
+                    print(characterizedResultOCR)
+                    for item in data_from_db:
+                        if (characterizedResultOCR in item):
+                            print(f"Access is allowed for {characterizedResultOCR}")
+                            break
 
                 cv2.rectangle(cropped_img, (cords_xyxy_ALPR[0],cords_xyxy_ALPR[1]), (cords_xyxy_ALPR[2],cords_xyxy_ALPR[3]), (255, 0, 0), 2)
 
