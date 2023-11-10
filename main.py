@@ -6,6 +6,7 @@ from flask import Flask, jsonify, request, send_file, render_template
 from PIL import Image
 import base64
 import io
+import numpy as np
 
 model = YOLO('yolov8x.pt')
 ALPR = YOLO('license_plate_detector.pt')
@@ -22,7 +23,11 @@ def root():
 def detect():
     file = request.files["image_file"]
 
-    image = cv2.imread(file.stream)
+    #print(file.stream)
+
+    image = np.asarray(bytearray(file.read()), dtype=np.uint8)
+    image = cv2.imdecode(image, -1)
+    #image = cv2.imread(file.stream)
 
     result = model.predict(image)[0].boxes
 

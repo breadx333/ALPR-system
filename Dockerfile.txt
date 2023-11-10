@@ -1,0 +1,9 @@
+FROM python:3.11.6-bullseye
+
+WORKDIR /home
+
+ENV TZ=Asia/Almaty
+
+RUN apt update && apt install -y ca-certificates x509-util ffmpeg libsm6 libxext6 python3-opencv
+
+CMD pip install --no-cache-dir -r requirements.txt && flask --app main run --host=0.0.0.0
